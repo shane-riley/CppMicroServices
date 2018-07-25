@@ -44,7 +44,6 @@ const std::chrono::milliseconds BundleThread::KEEP_ALIVE(1000);
 
 BundleThread::BundleThread(CoreBundleContext* ctx)
   : be(BundleEvent::BUNDLE_INSTALLED, nullptr)
-  , startStopTimeout(0)
   , op()
   , doRun(true)
 {
@@ -203,94 +202,21 @@ std::exception_ptr BundleThread::StartAndWait(BundlePrivate* b, int operation, U
   }
   op.NotifyAll();
 
-  // timeout for waiting on op to finish can be set for start/stop
-  auto waitTime = std::chrono::milliseconds::zero();
-  if (operation == OP_START || operation == OP_STOP)
-  {
-    b->aborted = static_cast<uint8_t>(BundlePrivate::Aborted::NO); // clear aborted status
-    waitTime = startStopTimeout;
-  }
-  bool timeout = false;
-  bool uninstall = false;
-
-  b->coreCtx->resolver.WaitFor(resolveLock, waitTime, [&res]{
+  b->coreCtx->resolver.WaitFor(resolveLock, std::chrono::milliseconds::zero(), [&res]{
     return res.valid() &&
         res.wait_for(std::chrono::milliseconds::zero()) == US_FUTURE_READY;
   });
 
-  // Abort start/stop operation if bundle has been uninstalled
-  if ((operation == OP_START || operation == OP_STOP) && b->state == Bundle::STATE_UNINSTALLED)
+  b->coreCtx->bundleThreads.Lock(), b->coreCtx->bundleThreads.value.push_front(this->shared_from_this());
+  b->ResetBundleThread();
+  try
   {
-    uninstall = true;
+    res.get();
+    return nullptr;
   }
-  else if (waitTime.count() > 0 && // we were waiting with a timeout
-           ((operation == OP_START && b->state == Bundle::STATE_STARTING)
-            || (operation == OP_STOP && b->state == Bundle::STATE_STOPPING))
-           )
+  catch (...)
   {
-    timeout = true;
-  }
-
-  // if b->aborted is set, BundleThread has/will concluded start/stop
-  if (b->aborted == static_cast<uint8_t>(BundlePrivate::Aborted::NONE) &&
-      (timeout || uninstall))
-  {
-    // BundleThread is still in BundleActivator::Start/::Stop,
-    // signal to BundleThread that this
-    // thread is acting on uninstall/time-out
-    b->aborted = static_cast<uint8_t>(BundlePrivate::Aborted::YES);
-
-    std::string opType = operation == OP_START ? "start" : "stop";
-    std::string reason = timeout ? "Time-out during bundle " + opType + "()"
-                                 : "Bundle uninstalled during " + opType + "()";
-
-    DIAG_LOG(*b->coreCtx->sink) << "bundle thread aborted during " << opType
-                                << " of bundle #" << b->id;
-
-    if (timeout)
-    {
-      if (operation == OP_START)
-      {
-        // set state, send events, do clean-up like when Bundle::Start()
-        // throws an exception
-        // TODO: StartFailed() calls BundleListener::BundleChanged and
-        // should not be called with the packages lock as we do here
-        b->StartFailed();
-      }
-      else
-      {
-        // STOP, like when Bundle::Stop() returns/throws an exception
-        b->bactivator.reset();
-        b->Stop2();
-      }
-    }
-
-    Quit();
-    b->ResetBundleThread();
-
-    return std::make_exception_ptr(std::runtime_error(
-                                     "Bundle#" + util::ToString(b->id) + " " +
-                                     opType + " failed with reason: " + reason
-                                     ));
-  }
-  else
-  {
-    b->coreCtx->bundleThreads.Lock(), b->coreCtx->bundleThreads.value.push_front(this->shared_from_this());
-    if (operation != op.operation)
-    {
-      // TODO! Handle when operation has changed.
-      // i.e. uninstall during operation?
-    }
-    b->ResetBundleThread();
-    try
-    {
-      res.get();
-      return nullptr;
-    }
-    catch (...)
-    {
-      return std::current_exception();
-    }
+    return std::current_exception();
   }
 #else
   US_UNUSED(resolveLock);
@@ -318,15 +244,6 @@ std::exception_ptr BundleThread::StartAndWait(BundlePrivate* b, int operation, U
                                                             std::current_exception()));
   }
   return tmpres;
-#endif
-}
-
-bool BundleThread::IsExecutingBundleChanged() const
-{
-#ifdef US_ENABLE_THREADING_SUPPORT
-  return op.operation == OP_BUNDLE_EVENT;
-#else
-  return false;
 #endif
 }
 

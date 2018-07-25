@@ -14,6 +14,7 @@ include_directories(
 #-----------------------------------------------------------------------------
 set(_gtest_tests 
   AnyMapTest.cpp
+  BundleDeadLockTest.cpp
   BundleVersionTest.cpp
   GlobalServiceTrackerTest.cpp
   LDAPExprTest.cpp

@@ -1,0 +1,3 @@
+
+usFunctionCreateTestBundleWithResources(TestStaticInitBundleStart SOURCES TestStaticInitBundleStart.cpp RESOURCES manifest.json)
+

@@ -55,8 +55,6 @@ class BundleThread : public std::enable_shared_from_this<BundleThread>
 #ifdef US_ENABLE_THREADING_SUPPORT
   const static std::chrono::milliseconds KEEP_ALIVE;
 
-  std::chrono::milliseconds startStopTimeout;
-
   struct Op : detail::MultiThreaded<detail::MutexLockingStrategy<>, detail::WaitCondition>
   {
     Op() : operation(OP_IDLE) {}
@@ -103,8 +101,6 @@ public:
    * Note! Must be called while holding packages lock.
    */
   std::exception_ptr StartAndWait(BundlePrivate* b, int op, UniqueLock& resolveLock);
-
-  bool IsExecutingBundleChanged() const;
 
   bool operator==(const std::thread::id& id) const;
 
