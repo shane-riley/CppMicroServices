@@ -37,6 +37,7 @@
 
 #include "optionparser.h"
 #include "json/json.h"
+#include "base64/base64.h"
 
 // ---------------------------------------------------------------------------------
 // --------------------------    PLATFORM SPECIFIC CODE    -------------------------
@@ -304,10 +305,11 @@ public:
   /*
   * @brief Add manifest.json to this zip archive
   * @param manifest contents of the manifest to add to the zip archive
+  * @param obfuscate true to obfuscate the manifest contents, false otherwise.
   * @throw std::runtime exception if failed to add manifest.json
   * @throw InvalidManifest if manifest.json is invalid
   */
-  void AddManifestFile(const Json::Value& manifest);
+  void AddManifestFile(const Json::Value& manifest, bool obfuscate = false);
 
   /*
    * @brief Add a file to this zip archive
@@ -387,12 +389,16 @@ void ZipArchive::CheckAndAddToArchivedNames(const std::string& archiveEntry)
   }
 }
 
-void ZipArchive::AddManifestFile(const Json::Value& manifest)
-{
+void ZipArchive::AddManifestFile(const Json::Value& manifest, bool obfuscate)
+{ 
   std::string styledManifestJson(manifest.toStyledString());
   std::string archiveEntry(bundleName + "/manifest.json");
 
   CheckAndAddToArchivedNames(archiveEntry);
+
+  if (obfuscate) {
+    styledManifestJson = base64_encode(manifest.toStyledString());
+  }
 
   if (MZ_FALSE == mz_zip_writer_add_mem(writeArchive.get(),
                                         archiveEntry.c_str(),
@@ -593,7 +599,8 @@ enum OptionIndex
   RESADD,
   ZIPADD,
   MANIFESTADD,
-  BUNDLEFILE
+  BUNDLEFILE,
+  OBFUSCATEMANIFEST
 };
 
 const option::Descriptor usage[] = {
@@ -666,6 +673,12 @@ const option::Descriptor usage[] = {
     Custom_Arg::NonEmpty,
     " --bundle-file, -b \tPath to the bundle binary. The resources zip file "
     "will be appended to this binary. " },
+  { OBFUSCATEMANIFEST,
+    0,
+    "f",
+    "obfuscate",
+    Custom_Arg::None,
+    " --obfuscate, -f \tObfuscate the contents of manifest.json."},
   { UNKNOWN,
     0,
     "",
@@ -871,7 +884,7 @@ int main(int argc, char** argv)
         }
 
         // concatenate all manifest files into one, validate it and add it to the zip archive.
-        zipArchive->AddManifestFile(AggregateManifestsAndValidate(manifests));
+        zipArchive->AddManifestFile(AggregateManifestsAndValidate(manifests), (options[OBFUSCATEMANIFEST])?true:false);
       }
       // Add resource files to the zip archive
       for (option::Option* resopt = options[RESADD]; resopt;

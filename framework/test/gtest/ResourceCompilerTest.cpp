@@ -1279,3 +1279,28 @@ TEST_F(ResourceCompilerTest, testManifestWithNullTerminator)
   //Test that the JSON content matches the expected JSON content.
   ASSERT_EQ(0, nullTerminatorJSON.compare(expectedJSON));
 }
+
+TEST_F(ResourceCompilerTest, testObfuscateManifest) {
+  const std::string manifest_json = R"({
+    "test" : { 
+        "bar" : "baz\\0bar",
+        "foo\\0bar" : [1, 2, 5, 7]
+    }})";
+
+  const std::string jsonFileName("obfuscate_manifest.json");
+  const std::string zipFile("obfuscated_manifest.zip");
+
+  createManifestFile(tempdir, manifest_json, jsonFileName);
+
+  std::ostringstream cmd;
+  cmd << rcbinpath;
+  cmd << " --bundle-name "
+      << "main";
+  cmd << " --out-file " << tempdir << zipFile;
+  cmd << " --manifest-add " << tempdir << jsonFileName;
+  cmd << " --obfuscate";
+  //Test the successful embedding of a manifest containing an embedded null terminator.
+  ASSERT_EQ(EXIT_SUCCESS, runExecutable(cmd.str()));
+
+  std::cout << getManifestContent(tempdir + zipFile, "main");
+}
