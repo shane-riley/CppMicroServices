@@ -241,6 +241,9 @@ template<class T>
 std::optional<typename BundleTracker<T>::TrackedParamType>
 BundleTracker<T>::AddingBundle(const Bundle& bundle, const BundleEvent& event)
 {
+
+  static_assert(_MSVC_LANG == 201703L);
+
   // TODO: Make this SFINAE
   return TypeTraits::ConvertToTrackedType(bundle);
 }
