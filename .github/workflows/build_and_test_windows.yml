@@ -49,9 +49,9 @@ jobs:
       run: ctest -VV -S cmake\usCTestScript_github.cmake
     
     - uses: actions/upload-artifact@v3
-    with:
-      name: build-leftovers
-      path: Z:/build/config_${{matrix.buildconfiguration}/*
+      with:
+        name: build-leftovers
+        path: Z:/build/config_${{matrix.buildconfiguration}}/*
 
   build_win_msvc_coverage:
     name: Build and Test with Code Coverage [${{matrix.os}},Configuration=${{matrix.buildconfiguration}}]
