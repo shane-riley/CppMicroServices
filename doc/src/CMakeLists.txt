@@ -2,19 +2,18 @@
 project(CppMicroServicesExamples)
 
 set(CMAKE_CXX_STANDARD_REQUIRED 1)
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 find_package(CppMicroServices NO_MODULE REQUIRED)
 
 cmake_minimum_required(VERSION ${US_CMAKE_MINIMUM_REQUIRED_VERSION})
 cmake_policy(VERSION ${US_CMAKE_MINIMUM_REQUIRED_VERSION})
+
 # [prj-end]
 
-
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Init output directories
-#-----------------------------------------------------------------------------
-
+# -----------------------------------------------------------------------------
 set(CppMicroServicesExamples_ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
 set(CppMicroServicesExamples_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
 set(CppMicroServicesExamples_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
@@ -24,7 +23,6 @@ foreach(_type ARCHIVE LIBRARY RUNTIME)
     set(CMAKE_${_type}_OUTPUT_DIRECTORY ${CppMicroServicesExamples_${_type}_OUTPUT_DIRECTORY})
   endif()
 endforeach()
-
 
 function(CreateTutorial _name)
   set(_srcs ${ARGN})
@@ -42,6 +40,7 @@ function(CreateTutorial _name)
       target_link_libraries(Tutorial-${_name} Tutorial-${_dep})
     endforeach()
   endif()
+
   target_link_libraries(Tutorial-${_name} ${CppMicroServices_LIBRARIES})
   set_target_properties(Tutorial-${_name} PROPERTIES
     LABELS Tutorial
@@ -50,12 +49,10 @@ function(CreateTutorial _name)
 
   usFunctionAddResources(TARGET Tutorial-${_name} BUNDLE_NAME ${_name} WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/tutorial/${_name}/resources FILES manifest.json)
   usFunctionEmbedResources(TARGET Tutorial-${_name})
-
 endfunction()
 
 # [fnc-end]
-
-set (_tutorial_names
+set(_tutorial_names
   eventlistener
   dictionaryservice
   frenchdictionary
@@ -64,7 +61,7 @@ set (_tutorial_names
   dictionaryclient3
   spellcheckservice
   spellcheckclient
-  )
+)
 
 foreach(_tutorial ${_tutorial_names})
   add_subdirectory(tutorial/${_tutorial})
@@ -78,46 +75,47 @@ endforeach()
 
 add_subdirectory(examples/getting_started)
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Test if the doc code compiles against an install tree and if the
 # Makefile example compiles
-#-----------------------------------------------------------------------------
-
+# -----------------------------------------------------------------------------
 if(US_BUILD_TESTING)
   enable_testing()
 
-  set(_doc_code_tests )
+  set(_doc_code_tests)
 
   if(WIN32)
     string(REGEX REPLACE "^.:" "" _install_prefix ${CMAKE_INSTALL_PREFIX})
   else()
     set(_install_prefix ${CMAKE_INSTALL_PREFIX})
   endif()
+
   set(_install_dir "${CppMicroServices_BINARY_DIR}/install_test/${_install_prefix}")
 
   add_test(NAME InstallCleanTest
-           COMMAND ${CMAKE_COMMAND} -E remove_directory "${_install_dir}")
+    COMMAND ${CMAKE_COMMAND} -E remove_directory "${_install_dir}")
 
   add_test(NAME InstallTest
-           WORKING_DIRECTORY ${CppMicroServices_BINARY_DIR}
-           COMMAND ${CMAKE_COMMAND} --build ${CppMicroServices_BINARY_DIR} --config $<CONFIGURATION> --target install)
+    WORKING_DIRECTORY ${CppMicroServices_BINARY_DIR}
+    COMMAND ${CMAKE_COMMAND} --build ${CppMicroServices_BINARY_DIR} --config $<CONFIGURATION> --target install)
   set_tests_properties(InstallTest PROPERTIES
-                       ENVIRONMENT "DESTDIR=${CppMicroServices_BINARY_DIR}/install_test"
-                       DEPENDS InstallCleanTest)
+    ENVIRONMENT "DESTDIR=${CppMicroServices_BINARY_DIR}/install_test"
+    DEPENDS InstallCleanTest)
 
   set(_doc_code_binary_dir "${CppMicroServices_BINARY_DIR}/doc_code_build")
 
   add_test(NAME DocCodeCleanTest
-           COMMAND ${CMAKE_COMMAND} -E remove_directory "${_doc_code_binary_dir}")
+    COMMAND ${CMAKE_COMMAND} -E remove_directory "${_doc_code_binary_dir}")
 
   add_test(NAME DocCodeCreateDirTest
-           COMMAND ${CMAKE_COMMAND} -E make_directory "${_doc_code_binary_dir}")
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${_doc_code_binary_dir}")
   set_tests_properties(DocCodeCreateDirTest PROPERTIES
-                       DEPENDS DocCodeCleanTest)
+    DEPENDS DocCodeCleanTest)
 
   list(APPEND _doc_code_tests InstallCleanTest InstallTest DocCodeCleanTest
-                             DocCodeCreateDirTest)
+    DocCodeCreateDirTest)
   set(generator_platform)
+
   if(CMAKE_GENERATOR_PLATFORM)
     set(generator_platform -A ${CMAKE_GENERATOR_PLATFORM})
   endif()
@@ -125,48 +123,48 @@ if(US_BUILD_TESTING)
   if(CMAKE_CONFIGURATION_TYPES)
     foreach(config ${CMAKE_CONFIGURATION_TYPES})
       add_test(NAME DocCodeConfigureTest-${config} CONFIGURATIONS ${config}
-               WORKING_DIRECTORY ${_doc_code_binary_dir}
-               COMMAND ${CMAKE_COMMAND}
-                       -D CMAKE_C_COMPILER:STRING=${CMAKE_C_COMPILER}
-                       -D CMAKE_CXX_COMPILER:STRING=${CMAKE_CXX_COMPILER}
-                       "-DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}"
-                       -D BUILD_SHARED_LIBS:BOOL=${BUILD_SHARED_LIBS}
-                       -G ${CMAKE_GENERATOR} ${generator_platform}
-                       "-DCppMicroServices_DIR:PATH=${_install_dir}/${AUXILIARY_CMAKE_INSTALL_DIR}"
-                       "${CMAKE_CURRENT_LIST_DIR}")
+        WORKING_DIRECTORY ${_doc_code_binary_dir}
+        COMMAND ${CMAKE_COMMAND}
+        -D CMAKE_C_COMPILER:STRING=${CMAKE_C_COMPILER}
+        -D CMAKE_CXX_COMPILER:STRING=${CMAKE_CXX_COMPILER}
+        "-DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}"
+        -D BUILD_SHARED_LIBS:BOOL=${BUILD_SHARED_LIBS}
+        -G ${CMAKE_GENERATOR} ${generator_platform}
+        "-DCppMicroServices_DIR:PATH=${_install_dir}/${AUXILIARY_CMAKE_INSTALL_DIR}"
+        "${CMAKE_CURRENT_LIST_DIR}")
       set_tests_properties(DocCodeConfigureTest-${config} PROPERTIES
-                           DEPENDS "InstallTest;DocCodeCreateDirTest"
-                           ENVIRONMENT "LDFLAGS=-fprofile-arcs")
+        DEPENDS "InstallTest;DocCodeCreateDirTest"
+        ENVIRONMENT "LDFLAGS=-fprofile-arcs")
 
       add_test(NAME DocCodeBuildTest-${config} CONFIGURATIONS ${config}
-               WORKING_DIRECTORY ${_doc_code_binary_dir}
-               COMMAND ${CMAKE_COMMAND} --build . --config ${config})
+        WORKING_DIRECTORY ${_doc_code_binary_dir}
+        COMMAND ${CMAKE_COMMAND} --build . --config ${config})
       set_tests_properties(DocCodeBuildTest-${config} PROPERTIES
-                           DEPENDS DocCodeConfigureTest-${config})
+        DEPENDS DocCodeConfigureTest-${config})
 
       list(APPEND _doc_code_tests DocCodeConfigureTest-${config} DocCodeBuildTest-${config})
     endforeach()
   else()
     add_test(NAME DocCodeConfigureTest-${CMAKE_BUILD_TYPE}
-             WORKING_DIRECTORY ${_doc_code_binary_dir}
-             COMMAND ${CMAKE_COMMAND}
-                     -D CMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
-                     -D CMAKE_C_COMPILER:STRING=${CMAKE_C_COMPILER}
-                     "-DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}"
-                     -D CMAKE_CXX_COMPILER:STRING=${CMAKE_CXX_COMPILER}
-                     -D BUILD_SHARED_LIBS:BOOL=${BUILD_SHARED_LIBS}
-                     -G ${CMAKE_GENERATOR} ${generator_platform}
-                     "-DCppMicroServices_DIR:PATH=${_install_dir}/${AUXILIARY_CMAKE_INSTALL_DIR}"
-                     "${CMAKE_CURRENT_LIST_DIR}")
+      WORKING_DIRECTORY ${_doc_code_binary_dir}
+      COMMAND ${CMAKE_COMMAND}
+      -D CMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
+      -D CMAKE_C_COMPILER:STRING=${CMAKE_C_COMPILER}
+      "-DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}"
+      -D CMAKE_CXX_COMPILER:STRING=${CMAKE_CXX_COMPILER}
+      -D BUILD_SHARED_LIBS:BOOL=${BUILD_SHARED_LIBS}
+      -G ${CMAKE_GENERATOR} ${generator_platform}
+      "-DCppMicroServices_DIR:PATH=${_install_dir}/${AUXILIARY_CMAKE_INSTALL_DIR}"
+      "${CMAKE_CURRENT_LIST_DIR}")
     set_tests_properties(DocCodeConfigureTest-${CMAKE_BUILD_TYPE} PROPERTIES
-                         DEPENDS "InstallTest;DocCodeCreateDirTest"
-                         ENVIRONMENT "LDFLAGS=-fprofile-arcs")
+      DEPENDS "InstallTest;DocCodeCreateDirTest"
+      ENVIRONMENT "LDFLAGS=-fprofile-arcs")
 
     add_test(NAME DocCodeBuildTest-${CMAKE_BUILD_TYPE}
-             WORKING_DIRECTORY ${_doc_code_binary_dir}
-             COMMAND ${CMAKE_COMMAND} --build . --config ${CMAKE_BUILD_TYPE})
+      WORKING_DIRECTORY ${_doc_code_binary_dir}
+      COMMAND ${CMAKE_COMMAND} --build . --config ${CMAKE_BUILD_TYPE})
     set_tests_properties(DocCodeBuildTest-${CMAKE_BUILD_TYPE} PROPERTIES
-                         DEPENDS DocCodeConfigureTest-${CMAKE_BUILD_TYPE})
+      DEPENDS DocCodeConfigureTest-${CMAKE_BUILD_TYPE})
 
     list(APPEND _doc_code_tests DocCodeConfigureTest-${CMAKE_BUILD_TYPE} DocCodeBuildTest-${CMAKE_BUILD_TYPE})
   endif()
@@ -175,36 +173,40 @@ if(US_BUILD_TESTING)
   # if we are on a proper system
   if(UNIX AND NOT APPLE AND BUILD_SHARED_LIBS)
     set(US_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${US_CXX_FLAGS}")
+
     # We need to supply the correct language flag to the Makefile
     set(US_CXX_VER_FLAGS -std=c++14)
     usFunctionCheckCompilerFlags(${US_CXX_VER_FLAGS} _have_cxx14)
+
     if(NOT _have_cxx14)
       set(US_CXX_VER_FLAGS -std=c++0x)
       usFunctionCheckCompilerFlags(${US_CXX_VER_FLAGS} _have_cxx0x)
+
       if(NOT _have_cxx0x)
-        set(US_CXX_VER_FLAGS )
+        set(US_CXX_VER_FLAGS)
       endif()
     endif()
+
     set(US_CXX_FLAGS "${US_CXX_FLAGS} ${US_CXX_VER_FLAGS}")
 
     find_program(MAKE_COMMAND NAMES make gmake)
     find_program(CXX_COMMAND NAMES g++)
     mark_as_advanced(MAKE_COMMAND CXX_COMMAND)
+
     if(MAKE_COMMAND AND CXX_COMMAND)
       add_test(NAME MakefileExampleCleanTest
-               WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/examples/makefile
-               COMMAND ${MAKE_COMMAND} clean)
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/examples/makefile
+        COMMAND ${MAKE_COMMAND} clean)
       add_test(NAME MakefileExampleTest
-               WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/examples/makefile
-               COMMAND ${MAKE_COMMAND})
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/examples/makefile
+        COMMAND ${MAKE_COMMAND})
       set_tests_properties(MakefileExampleTest PROPERTIES
-                           DEPENDS "MakefileExampleCleanTest;InstallTest"
-                           ENVIRONMENT "CppMicroServices_ROOT=${CppMicroServices_BINARY_DIR}/install_test${CMAKE_INSTALL_PREFIX};CPPMICROSERVICES_MAJOR_VER=${CppMicroServices_VERSION_MAJOR};US_CXX_FLAGS=${US_CXX_FLAGS};US_CPPMICROSERVICES_TARGET=$<TARGET_FILE:CppMicroServices>;US_CXX=${CMAKE_CXX_COMPILER}")
+        DEPENDS "MakefileExampleCleanTest;InstallTest"
+        ENVIRONMENT "CppMicroServices_ROOT=${CppMicroServices_BINARY_DIR}/install_test${CMAKE_INSTALL_PREFIX};CPPMICROSERVICES_MAJOR_VER=${CppMicroServices_VERSION_MAJOR};US_CXX_FLAGS=${US_CXX_FLAGS};US_CPPMICROSERVICES_TARGET=$<TARGET_FILE:CppMicroServices>;US_CXX=${CMAKE_CXX_COMPILER}")
       list(APPEND _doc_code_tests MakefileExampleCleanTest MakefileExampleTest)
     endif()
   endif()
 
   set_tests_properties(${_doc_code_tests} PROPERTIES
-                       LABELS regular)
-
+    LABELS regular)
 endif()
