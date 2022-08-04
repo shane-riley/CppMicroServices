@@ -24,12 +24,12 @@
 #define CPPMICROSERVICES_SERVICELISTENERHOOKPRIVATE_H
 
 #include "cppmicroservices/ServiceListenerHook.h"
-
+#include "cppmicroservices/detail/Threads.h"
 #include "ServiceListenerEntry.h"
 
 namespace cppmicroservices {
 
-class ServiceListenerHook::ListenerInfoData
+class ServiceListenerHook::ListenerInfoData : detail::MultiThreaded<>
 {
 public:
   ListenerInfoData(std::shared_ptr<BundleContextPrivate> context,
@@ -46,6 +46,8 @@ public:
   ListenerTokenId tokenId;
   std::string filter;
   bool bRemoved;
+
+  friend ServiceListenerHook;
 };
 }
 

@@ -71,22 +71,22 @@ bool ServiceListenerHook::ListenerInfo::IsNull() const
 
 BundleContext ServiceListenerHook::ListenerInfo::GetBundleContext() const
 {
-  return MakeBundleContext(d->context);
+  return (d->Lock(), MakeBundleContext(d->context));
 }
 
 std::string ServiceListenerHook::ListenerInfo::GetFilter() const
 {
-  return d->filter;
+  return (d->Lock(), d->filter);
 }
 
 bool ServiceListenerHook::ListenerInfo::IsRemoved() const
 {
-  return d->bRemoved;
+  return (d->Lock(), d->bRemoved);
 }
 
 bool ServiceListenerHook::ListenerInfo::operator==(
   const ListenerInfo& other) const
 {
-  return d == other.d;
+  return (d->Lock(), d == other.d);
 }
 }
