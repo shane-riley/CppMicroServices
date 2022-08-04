@@ -142,16 +142,17 @@ void ServiceTracker<S,T>::Open()
 template<class S, class T>
 void ServiceTracker<S,T>::Close()
 {
-  try {
-    d->context.RemoveListener(std::move(d->listenerToken));
-  } catch (const std::runtime_error& /*e*/) {
-    /* In case the context was stopped or invalid. */
-  }
-
+  
   std::shared_ptr<_TrackedService> outgoing = d->trackedService.Load();
   {
     auto l = d->Lock();
     US_UNUSED(l);
+
+    try {
+    d->context.RemoveListener(std::move(d->listenerToken));
+    } catch (const std::runtime_error& /*e*/) {
+      /* In case the context was stopped or invalid. */
+    }
 
     if (outgoing == nullptr) {
       return;
