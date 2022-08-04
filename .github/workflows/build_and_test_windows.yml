@@ -2,7 +2,7 @@ name: BuildAndTestWindows
 
 on:
   push:
-    branches: [ development, master ]
+    branches: [ development, master, 710-service-tracker-race ]
   pull_request:
     branches: [ development ]
   workflow_dispatch:
